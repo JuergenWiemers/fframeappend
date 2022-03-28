@@ -1,8 +1,13 @@
-*! fframeappend 1.0.0 27mar2022 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! fframeappend 1.0.1 27mar2028 Jürgen Wiemers (juergen.wiemers@iab.de)
 *! Syntax: fframeappend [varlist] [if] [in], using(framename) [force preserve]
 *!
 *! fframeappend ("fast frame append") appends variables from using frame 'framename'
 *! to the active (master) frame.
+
+* This program is free software under the terms of the MIT License
+
+* Version history at bottom
+
 
 program fframeappend
     version 16
@@ -105,6 +110,7 @@ void append(string scalar varlist, string scalar usingframe, string scalar maste
 
 void checktypes(string scalar commonvars, string scalar usingframe, string scalar masterframe)
 {
+    currentframe = st_framecurrent()
     t = tokens(commonvars)
     incompatible_vars = J(1, 0, "")
     for (i = 1; i <= cols(t); i++) {
@@ -117,6 +123,12 @@ void checktypes(string scalar commonvars, string scalar usingframe, string scala
     if (cols(incompatible_vars) > 0) {
         st_local("incompatible_vars", invtokens(incompatible_vars))
     }
+    st_framecurrent(currentframe)
 }
 
 end
+
+
+* Version history
+* 1.0.1 Minor changes
+* 1.0.0 Initial release
