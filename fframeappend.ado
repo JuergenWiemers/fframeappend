@@ -1,4 +1,4 @@
-*! fframeappend 1.0.1 27mar2028 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! fframeappend 1.0.2 4apr2022 Jürgen Wiemers (juergen.wiemers@iab.de)
 *! Syntax: fframeappend [varlist] [if] [in], using(framename) [force preserve]
 *!
 *! fframeappend ("fast frame append") appends variables from using frame 'framename'
@@ -30,7 +30,7 @@ program fframeappend
     
     frame `using': qui describe `varlist', fullnames varlist
     local varlist = r(varlist)
-
+    
     cwf `master'
     qui describe, fullnames varlist
     local mastervars = r(varlist)
@@ -38,7 +38,7 @@ program fframeappend
     // Check for variables with incompatible type (string <-> numeric)
     if "`force'" == "" {
         local commonvars: list varlist & mastervars
-        mata: checktypes("`commonvars'", "`using'", "`master'")
+        mata: incompatible_vars("`commonvars'", "`using'", "`master'")
         if "`incompatible_vars'" != "" {
             display as error "You are trying to append numeric to string variables (or vice versa) for the following variables: "
             display as error "`incompatible_vars'"
@@ -46,20 +46,38 @@ program fframeappend
             exit 106
         }
     }
-    
+
+    // Promote variables in master frame if necessary
+    local commonvars_excl_inc_vars: list commonvars - incompatible_vars // exclude incompatibe vars
+    cwf `master'
+    foreach var in `commonvars_excl_inc_vars' {
+        mata: st_local("tm", st_vartype("`var'"))
+        frame `using': mata: st_local("tu", st_vartype("`var'"))
+        
+        if ("`tm'" == "`tu'") continue
+
+        cap confirm numeric variable `var', exact // Numeric and string variables need to be treated differently
+        if (!_rc) { // numeric
+            if      ( ("`tm'" == "byte")  & inlist("`tu'", "int", "long", "float", "double") ) repl_type `tu' `var'
+            else if ( ("`tm'" == "int")   & inlist("`tu'", "long", "float", "double") )        repl_type `tu' `var'
+            else if ( ("`tm'" == "long")  & inlist("`tu'", "float", "double") )                repl_type double `var'
+            else if ( ("`tm'" == "float") & inlist("`tu'", "long", "double") )                 repl_type double `var'
+        }
+        else { // string
+            if ( subinstr("`tm'", "str", "", 1) < subinstr("`tu'", "str", "", 1) )             repl_type `tu' `var'
+        }
+    }
+
     // If variables in `varlist' do not exist in the master data,
     // generate them (with the type of the using data) and set them
     // to missing / empty string.
     cwf `master'
     local newvars: list varlist - mastervars
     foreach var in `newvars' {
-        capture confirm variable `var'
-        if _rc {
-            frame `using': mata: st_local("type", st_vartype("`var'"))
-            frame `using': cap confirm numeric variable `var', exact
-            local init = cond(!_rc, ".", `""""')
-            qui gen `type' `var' = `init'
-        }
+        frame `using': mata: st_local("type", st_vartype("`var'"))
+        frame `using': cap confirm numeric variable `var', exact
+        local init = cond(!_rc, ".", `""""')
+        qui gen `type' `var' = `init'
     }
 
     cwf `using'
@@ -67,7 +85,31 @@ program fframeappend
     mark `touse' `if' `in'
     
     mata: append("`varlist'", "`using'", "`master'")
+    
+    order `mastervars', first
     if ("`preserve'" != "") restore, not
+end
+
+
+// Helper program to promote variables if necessary
+program repl_type
+    args tu var
+    
+    // Get format/varlabel/valuelabel of variable in master frame
+    mata: st_local("varformat", st_varformat("`var'"))
+    mata: st_local("varlabel", st_varlabel("`var'"))
+    mata: st_local("varvaluelabel", st_varvaluelabel("`var'"))
+    
+    // Promote variable type and apply previous settings
+    tempvar repl
+    generate `tu' `repl' = `var'
+    mata: st_varformat("`repl'", "`varformat'")
+    mata: st_varlabel("`repl'", "`varlabel'")
+    if ("`varvaluelabel'" != "") mata: st_varvaluelabel("`repl'", "`varvaluelabel'")
+    
+    // Create variable with original name/contents/formats/labels, but promoted type
+    drop `var'
+    rename `repl' `var'
 end
 
 mata:
@@ -108,7 +150,7 @@ void append(string scalar varlist, string scalar usingframe, string scalar maste
 }
 
 
-void checktypes(string scalar commonvars, string scalar usingframe, string scalar masterframe)
+void incompatible_vars(string scalar commonvars, string scalar usingframe, string scalar masterframe)
 {
     currentframe = st_framecurrent()
     t = tokens(commonvars)
@@ -130,5 +172,7 @@ end
 
 
 * Version history
+* 1.0.2 Variable types in the master frame are now promoted if the variable type of the corresponding variable
+*       in the using frame is "larger".
 * 1.0.1 Minor changes
 * 1.0.0 Initial release

@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0  27mar2022}{...}
+{* *! version 1.0.2  4apr2022}{...}
 {title:Title}
 
 {phang}
@@ -26,10 +26,13 @@
 {title:Description}
 
 {pstd}
-{cmd:fframeappend} appends the variables {it:{help varlist}} in the frame {it: framename} to the current frame. 
-If no {it:{help varlist}} is provided, all variables in frame {it: framename} will be appended to the current frame. 
-The new observations will be at the bottom of the current frame. 
-Types of variables and the ordering of variables in the current frame are always preserved. 
+{cmd:fframeappend} appends the variables {it:{help varlist}} in the "using frame" to the currently active frame. 
+If no {it:{help varlist}} is provided, all variables in the using frame will be appended to the currently active frame. 
+The new observations will be at the bottom of the currently active frame. 
+Variables in the currently active frame are automatically promoted following the promotion rules of {cmd:{help replace}}.
+The ordering of variables in the currently active frames is preserved. 
+With option {cmd:force}, the appended values for incompatible variables (numeric <-> string) are filled with missing values or empty strings, 
+depending on the type of the incompatible variable in the currently active frame.
 
 {title:Remarks and Acknowledgements}
 
