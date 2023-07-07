@@ -1,40 +1,133 @@
-*! fframeappend 1.0.3 28feb2023 Jürgen Wiemers (juergen.wiemers@iab.de)
-*! Syntax: fframeappend [varlist] [if] [in], using(framename) [force preserve]
+*! fframeappend 1.1.0DEV 9jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve Generate(name)]
 *!
-*! fframeappend ("fast frame append") appends variables from using frame 'framename'
+*! fframeappend ("fast frame append") appends variables from using frames 'framelist'
 *! to the active (master) frame.
 
 * This program is free software under the terms of the MIT License
 
 * Version history at bottom
 
-
+// Wrapper for fframeappend_run
 program fframeappend
     version 16
-    
+
+    // Retokenize 0
+    local 0: list clean 0    
+
+    // Check if using() is given
     if !strmatch("`0'", "*using(*") {
-        display as error "option 'using()' required"
+        display as error "Option 'using()' required"
         exit 198
     }
 
+    // Replace abbreviated frame list with expanded list; rebuild local 0 with expanded list
+    local using_frames = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
+    local using_frames: list clean using_frames
+    local using_frames: list uniq using_frames
+    local expanded_frames
+    foreach frame in `using_frames' {
+        qui frames dir `frame'
+        local expanded_frames `expanded_frames' `r(frames)'
+    }
+    local expanded_frames: list uniq expanded_frames    
+    local 0 = subinstr("`0'", "`using_frames'", "`expanded_frames'", 1)
+
+    // Check if current frame is included in using frames
+    qui frame
+    local master = r(currentframe)    
+    if strmatch("`expanded_frames'", "*`master'") {
+        display as error "You are trying to append the current frame to itself"
+        exit 110
+    }
+
+    // Check `if'/`in' in using frames
+    foreach usingf in `expanded_frames' {
+        frame `usingf': syntax [anything] [if] [in], using(namelist min=1) [force preserve Generate(name)]
+    }
+
+    // Check that generate variable does not exist in master and any using frame
+    if "`generate'"!="" {
+        cap confirm new variable `generate'
+        if _rc == 110 {
+            display as error "Variable `generate' already defined in current frame `c(frame)'"
+            exit 110
+        }
+        foreach frame_name in `expanded_frames' {
+            frame `frame_name': cap confirm new variable `generate'
+            if _rc == 110 {
+                display as error "Variable `generate' already defined in frame `frame_name'"
+                exit 110                
+            }
+        }
+    }
+
+    // Check whether * or _all are in `anything'
+    local flag = 0
+    foreach token in * _all {
+        local test: list posof "`token'" in anything
+        if (`test') local flag = 1
+    }
+    if (`flag') local anything = ""
+
+    if ("`preserve'" != "") preserve
+
+    if ("`generate'" != "")  {
+        generate byte `generate' = 0
+    
+        // Add generate to variable list
+        if ("`anything'" != "") local anything `anything' `generate'
+    }
+
+    // Loop over framelist
+    local counter = 0
+    foreach usingf in `expanded_frames' {
+        local `counter++'
+        frame `usingf': cap drop __0* // drop potential local variables in using frames
+        if ("`generate'" != "") frame `usingf': generate byte `generate' = `counter'
+        fframeappend_run `anything' `if' `in', using(`usingf') `force'
+    }
+
+    if ("`preserve'" != "") restore, not
+
+end
+
+// Main routine
+program fframeappend_run    
     // Get name of using frame from args to be able to
     // run 'syntax' on the using frame.
-    local using_token = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
+    local using = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
 
-    frame `using_token': syntax [varlist] [if] [in], using(string) [force preserve]
-    
-    if ("`preserve'" != "") preserve
-    
+    frame `using': syntax [anything] [if] [in], using(namelist min=1) [force preserve generate(name)]
+
+    // Check if variables exist in frame
+    if "`anything'" != "" {
+        foreach var in `anything' {
+            frame `using': capture confirm variable `var'
+            if _rc {
+                display as error "Variable `var' does not exist in using frame `using'."
+                exit 111
+            }
+        }
+    }
+
     qui frame
     local master = r(currentframe)
     
-    frame `using': qui describe `varlist', fullnames varlist
+    frame `using': qui describe `anything', fullnames varlist
     local varlist = r(varlist)
-    
+
+    // Edge case: empty master frame
+    mata: st_local("master_has_vars", strofreal(st_nvar()))
+    if (!`master_has_vars') {
+        frame copy `using' `master', replace
+        exit 0
+    }
+
     cwf `master'
     qui describe, fullnames varlist
     local mastervars = r(varlist)
-    
+
     // Check for variables with incompatible type (string <-> numeric)
     if "`force'" == "" {
         local commonvars: list varlist & mastervars
@@ -77,7 +170,7 @@ program fframeappend
         frame `using': mata: st_local("type", st_vartype("`var'"))
         frame `using': cap confirm numeric variable `var', exact
         local init = cond(!_rc, ".", `""""')
-        qui gen `type' `var' = `init'
+        qui generate `type' `var' = `init'
     }
 
     cwf `using'
@@ -87,7 +180,6 @@ program fframeappend
     mata: append("`varlist'", "`using'", "`master'")
     
     order `mastervars', first
-    if ("`preserve'" != "") restore, not
 end
 
 
@@ -151,6 +243,12 @@ end
 
 
 * Version history
+* 1.1.0 New features:
+*       - Multiple frames can be appended by providing the frame names to using: using(f1 f2 f3 ...).
+*         Wildcards are allowed in framelist, e.g., 'using(f* g??)'
+*       - Option generate(name) to generate a variable that marks the origin of the observations
+*         0 = master frame, 1, 2, 3, ... = frame number corresponding to the order of the frames given in
+*         the `using()` option
 * 1.0.3 Promoting variables in the master frame resulted in noisy output ("missing values created") if the
 *       promoted variable contained missing values. This has been fixed. (Thanks to James Beard for informing
 *       me about the issue.)
