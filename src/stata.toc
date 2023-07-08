@@ -1,0 +1,3 @@
+v 3
+d Jürgen Wiemers, Institute for Employment Research (IAB), Germany (Juergen.Wiemers@@iab.de)
+p fframeappend FFRAMEAPPEND - module to append data frames to currently active data frame

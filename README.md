@@ -2,11 +2,15 @@
 
 Appends data frames to the active data frame in Stata
 
+Latest SSC version: 1.0.3
+
 ## Installation
 
-To install the Stata package, clone or download this repo, and then
-copy `fframeappend.ado` and `fframeappend.sthlp` to your personal
-ado folder. You can find this folder using the `sysdir` command.
+To install the latest stable version of this package, run the following line from the Stata prompt:
+
+```stata
+net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/master/src)
+```
 
 ## Remarks
 
