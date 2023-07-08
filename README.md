@@ -9,20 +9,20 @@ Latest SSC version: v1.0.3
 To install the latest stable version (v1.0.3) of this package, run the following line from the Stata prompt:
 
 ```stata
-net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/master/src)
+net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/master/src) replace
 ```
 
 or install the package through SSC.
 
 ## Recent Updates
 
-* **version v1.1.0DEV 7jul2023**:
-    - `using` now accepts multiple frame names. All `using` frames are appended in the specified order.
+* **version v1.1.0DEV 9jul2023**:
+    - `using` now accepts multiple frame names. All `using` frames are appended in the specified order. Wildcards are allowed, e.g., `using(fr*)`.
     - Option `generate(varname)` specifies the name of a new variable to be created that marks the source of observations. It will have values 0 for observations in the master dataframe (the current frame), and the value k for observations from the kth frame in the framelist.
     
     You can install this development version with
     ```stata
-    net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/v1.1.0DEV/src)
+    net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/v1.1.0DEV/src) replace
     ```
 
 
