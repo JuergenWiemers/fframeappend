@@ -89,7 +89,7 @@ program fframeappend
         local `counter++'
         frame `usingf': cap drop __0* // drop potential local variables in using frames
         if ("`generate'" != "") frame `usingf': generate byte `generate' = `counter'
-        fframeappend_run `anything' `if' `in', using(`usingf') `force'
+        fframeappend_run `anything' `if' `in', using(`usingf') `force' generate(`generate')
     }
 
     // Hack to set the master frame to "unsorted"; 
@@ -191,7 +191,7 @@ program fframeappend_run
     mark `touse' `if' `in'
     
     mata: append("`varlist'", "`using'", "`master'")
-    
+    if ("`generate'" != "") frame `using': drop `generate'
     order `mastervars', first
 end
 
