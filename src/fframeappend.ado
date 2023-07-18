@@ -77,10 +77,7 @@ program fframeappend
     if ("`preserve'" != "") preserve
 
     if ("`generate'" != "")  {
-        generate byte `generate' = 0
-    
-        // Add generate to variable list
-        if ("`anything'" != "") local anything `anything' `generate'
+        generate long `generate' = 0
     }
 
     // Loop over framelist
@@ -88,8 +85,8 @@ program fframeappend
     foreach usingf in `expanded_frames' {
         local `counter++'
         frame `usingf': cap drop __0* // drop potential local variables in using frames
-        if ("`generate'" != "") frame `usingf': generate byte `generate' = `counter'
-        fframeappend_run `anything' `if' `in', using(`usingf') `force' generate(`generate')
+        fframeappend_run `anything' `if' `in', using(`usingf') `force'
+        if ("`generate'" != "") qui replace `generate' = `counter' if `generate' == .
     }
 
     // Hack to set the master frame to "unsorted"; 
@@ -111,7 +108,7 @@ program fframeappend_run
     // run 'syntax' on the using frame.
     local using = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
 
-    frame `using': syntax [anything] [if] [in], using(namelist min=1) [force generate(name)]
+    frame `using': syntax [anything] [if] [in], using(namelist min=1) [force]
 
     // Check if variables exist in frame
     if "`anything'" != "" {
@@ -191,7 +188,6 @@ program fframeappend_run
     mark `touse' `if' `in'
     
     mata: append("`varlist'", "`using'", "`master'")
-    if ("`generate'" != "") frame `using': drop `generate'
     order `mastervars', first
 end
 
