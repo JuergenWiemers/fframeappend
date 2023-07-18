@@ -51,5 +51,5 @@ For relatively large using data frames (>100.000 observation, >1.000 variables) 
 {title:Author}
 
 {pstd}
-Jürgen Wiemers, IAB Nürnberg, juergen.wiemers@iab.de
+Jürgen Wiemers, IAB Nürnberg, juergen.wiemers@iab.de, {browse "https://github.com/JuergenWiemers/fframeappend":https://github.com/JuergenWiemers/fframeappend}.
 
