@@ -92,7 +92,15 @@ program fframeappend
         fframeappend_run `anything' `if' `in', using(`usingf') `force'
     }
 
-    if ("`sortlist'" != "") qui sort `sortlist'
+    // Hack to set the master frame to "unsorted"; 
+    // Without this, "describe" would (falsely) identify the master frame as sorted after appending.
+    if ("`sortlist'" != "") {
+        tempvar n
+        generate long `n' = _n
+        sort `n'
+        drop `n'
+    }
+
     if ("`preserve'" != "") restore, not
 
 end
