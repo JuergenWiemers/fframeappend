@@ -1,4 +1,4 @@
-*! fframeappend 1.1.0DEV 9jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! fframeappend 1.1.0DEV 18jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
 *! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve Generate(name)]
 *!
 *! fframeappend ("fast frame append") appends variables from using frames 'framelist'
@@ -20,6 +20,10 @@ program fframeappend
         display as error "Option 'using()' required"
         exit 198
     }
+
+    // Get current sort information
+    qui describe, fullnames varlist
+    local sortlist `r(sortlist)'
 
     // Replace abbreviated frame list with expanded list; rebuild local 0 with expanded list
     local using_frames = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
@@ -88,6 +92,7 @@ program fframeappend
         fframeappend_run `anything' `if' `in', using(`usingf') `force'
     }
 
+    if ("`sortlist'" != "") qui sort `sortlist'
     if ("`preserve'" != "") restore, not
 
 end
@@ -98,7 +103,7 @@ program fframeappend_run
     // run 'syntax' on the using frame.
     local using = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
 
-    frame `using': syntax [anything] [if] [in], using(namelist min=1) [force preserve generate(name)]
+    frame `using': syntax [anything] [if] [in], using(namelist min=1) [force generate(name)]
 
     // Check if variables exist in frame
     if "`anything'" != "" {
@@ -249,6 +254,12 @@ end
 *       - Option generate(name) to generate a variable that marks the origin of the observations
 *         0 = master frame, 1, 2, 3, ... = frame number corresponding to the order of the frames given in
 *         the `using()` option
+*      Bugfixes:
+*       - Previously, after appending the using frames, Stata considered the data in the master frame to be
+*         sorted according to the sort variables in the master frame (if the master frame was sorted before running 
+*         fframeappend) even if - because of the appended using frames - it wasn't. This could cause unexpected results,
+*         e.g., in a `merge` command following fframeappend because `merge` (falsely) considered the dataset to be
+*         correctly sorted. This has been fixed. Thanks to Stefan Mangelsdorf for notifying me about this issue.
 * 1.0.3 Promoting variables in the master frame resulted in noisy output ("missing values created") if the
 *       promoted variable contained missing values. This has been fixed. (Thanks to James Beard for informing
 *       me about the issue.)
