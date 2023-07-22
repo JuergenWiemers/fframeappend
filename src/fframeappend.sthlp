@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1.0  18jul2023}{...}
+{* *! version 1.1.0  22jul2023}{...}
 {title:Title}
 
 {phang}
@@ -14,17 +14,16 @@
     [{it:{help varlist}}]
     {ifin}
     {cmd:, using({it:framelist})}
-    [{opt force} {opt g:enerate(newvarname)} {cmd:{help preserve}}]
+    [{opt force} {cmd:{help preserve}} {opt drop} {opt g:enerate(newvarname)}]
 
 {synoptset 30 tabbed}{...}
 {synopthdr}
 {synoptline}
 {synopt:{opt force}}             append string to numeric or numeric to string without error{p_end}
-{synopt:{opt preserve}}          master frame will be restored if the program fails or if the user presses {helpb break:Break}{p_end}
-{synopt:{opth g:enerate(newvarname)}}  specifies the name of a new variable to be created that marks the source of observations. It will have values {cmd:0} for observations in the master dataframe (the current frame),
-and the value {it:k} for observations from the {it:k}th frame in the {it:framelist}. Caution: If wildcards are used in the {it:framelist}, e.g., {opt using(fr*)}, 
-all matching frames are added in alphabetical order, i.e., in the order given by
-{opt frames dir fr*}. {p_end}
+{synopt:{opt preserve}}          master frame will be restored if the program fails for any using frame or if the user presses {helpb break:Break}{p_end}
+{synopt:{opt drop}}              drop using frames after appending{p_end}
+{synopt:{opth g:enerate(newvarname)}}  specifies the name of a new string variable to be created that contains the name of the 
+origin frame for each observation{p_end}
 
 {marker description}{...}
 {title:Description}
@@ -37,7 +36,7 @@ If option {cmd:{help in}} is provided the range must be feasible in all frames o
 The new observations will be at the bottom of the current frame. 
 Variables in the currently active frame are automatically promoted following the promotion rules of {cmd:{help replace}}.
 With option {cmd:force}, the appended values for incompatible variables (numeric <-> string) are filled with missing values or empty strings, 
-depending on the type of the incompatible variable in the currently active frame.
+depending on the type of the incompatible variable in the currently active frame. All variable types (see {it:{help data_type}}) are supported.
 
 {title:Remarks and Acknowledgements}
 

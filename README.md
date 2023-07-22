@@ -16,10 +16,12 @@ or install the package through SSC.
 
 ## Recent Updates
 
-* **version v1.1.0DEV 18jul2023**:
-    - `using` now accepts multiple frame names. All `using` frames are appended in the specified order. Wildcards are allowed, e.g., `using(fr*)`.
-    - Option `generate(varname)` specifies the name of a new variable to be created that marks the source of observations. It will have values 0 for observations in the master dataframe (the current frame), and the value k for observations from the kth frame in the framelist.
+* **version v1.1.0DEV 22jul2023**:
+    - Option `using` now accepts multiple frame names. All `using` frames are appended in the specified order. Wildcards are allowed, e.g., `using(fr*)`.
+    - Option `generate(newvarname)` generates a variable that contains the origin frame name of the observations.
+    - Option `drop` drops appended using frames. Useful for conserving memory.
     - Bugfixes:
+      - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. This has been fixed.
       - Previously, after appending the using frames, Stata considered the data in the master frame to be sorted according to the sort variables in the master frame (if the master frame was sorted before running `fframeappend`) even if - because of the appended using frames - it wasn't. This could cause unexpected results, e.g., in a `merge` command following `fframeappend` because `merge` (falsely) considered the dataset to be correctly sorted. This has been fixed. Thanks to Stefan Mangelsdorf for notifying me about this issue.
 
     You can install this development version with

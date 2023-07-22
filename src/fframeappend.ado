@@ -1,5 +1,5 @@
-*! fframeappend 1.1.0DEV 18jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
-*! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve Generate(name)]
+*! fframeappend 1.1.0DEV 22jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve Generate(name) drop]
 *!
 *! fframeappend ("fast frame append") appends variables from using frames 'framelist'
 *! to the active (master) frame.
@@ -47,7 +47,7 @@ program fframeappend
 
     // Check `if'/`in' in using frames
     foreach usingf in `expanded_frames' {
-        frame `usingf': syntax [anything] [if] [in], using(namelist min=1) [force preserve Generate(name)]
+        frame `usingf': syntax [anything] [if] [in], using(namelist min=1) [force preserve Generate(name) drop]
     }
 
     // Check that generate variable does not exist in master and any using frame
@@ -77,7 +77,7 @@ program fframeappend
     if ("`preserve'" != "") preserve
 
     if ("`generate'" != "")  {
-        generate long `generate' = 0
+        generate str `generate' = "`master'"
     }
 
     // Loop over framelist
@@ -85,8 +85,10 @@ program fframeappend
     foreach usingf in `expanded_frames' {
         local `counter++'
         frame `usingf': cap drop __0* // drop potential local variables in using frames
-        fframeappend_run `anything' `if' `in', using(`usingf') `force'
-        if ("`generate'" != "") qui replace `generate' = `counter' if `generate' == .
+        frame `usingf': mata: st_local("has_variables", strofreal(st_nvar() > 0)) // Test if empy frame -> skip
+        if (`has_variables') fframeappend_run `anything' `if' `in', using(`usingf') `force'
+        if ("`generate'" != "") qui replace `generate' = "`usingf'" if `generate' == ""
+        if ("`drop'" != "") qui frame drop `usingf'
     }
 
     // Hack to set the master frame to "unsorted"; 
@@ -167,7 +169,9 @@ program fframeappend_run
             else if ( ("`tm'" == "float") & inlist("`tu'", "long", "double") )                 recast double `var'
         }
         else { // string
-            if ( subinstr("`tm'", "str", "", 1) < subinstr("`tu'", "str", "", 1) )             recast `tu' `var'
+            // Check for strL variables
+            if (!strmatch("`tm'", "strL") & "`tu'" == "strL")                                  recast `tu' `var'
+            else if ( subinstr("`tm'", "str", "", 1) < subinstr("`tu'", "str", "", 1) )        recast `tu' `var'
         }
     }
 
@@ -193,8 +197,17 @@ end
 
 
 mata:
+mata set matastrict on
+
 void append(string scalar varlist, string scalar usingframe, string scalar masterframe)
-{
+{   
+    real matrix master_numvars, using_numvars
+    string matrix master_strvars, using_strvars, using_strLvars
+    string rowvector vars, numvars, strvars, strLvars    
+    real rowvector numtype, strLvars_indices
+    real scalar i, masternobs, usingnobs
+    string scalar numvarstr, strvarstr, strLvarstr
+
     vars = tokens(varlist)
     numtype = J(1, cols(vars), .)
     for (i = 1; i <= cols(vars); i++) {
@@ -204,16 +217,33 @@ void append(string scalar varlist, string scalar usingframe, string scalar maste
     numvars = select(vars, numtype)
     strvars = select(vars, !numtype)
 
-    if (rows(numvars) > 0) numvarstr = invtokens(numvars)
-    if (rows(strvars) > 0) strvarstr = invtokens(strvars)
+    // Check strvars for strL vars
+    strLvars_indices = J(1, cols(strvars), 0)
+    for (i=1; i<=cols(strvars); i++) {
+        if (st_vartype(strvars[i]) == "strL") strLvars_indices[i] = 1
+        
+        // Variable might be strL in master; then treat as strL (use st_sdata) in using.
+        st_framecurrent(masterframe)
+        if (_st_varindex(strvars[i]) != .) {
+            if (st_vartype(strvars[i]) == "strL") strLvars_indices[i] = 1
+        }
+        st_framecurrent(usingframe)
+    }
+    strLvars = select(strvars, strLvars_indices)
+    strvars = select(strvars, !strLvars_indices)
+
+    if (cols(numvars) > 0)  numvarstr = invtokens(numvars)
+    if (cols(strvars) > 0)  strvarstr = invtokens(strvars)
+    if (cols(strLvars) > 0) strLvarstr = invtokens(strLvars)
 
     // Create views on using frame
     st_framecurrent(usingframe)
 
-    if (rows(numvars) > 0) st_view(using_numvars = J(0, 0, .), ., numvarstr, st_local("touse"))
-    if (rows(strvars) > 0) st_sview(using_strvars = J(0, 0, .), ., strvarstr, st_local("touse"))
+    if (cols(numvars) > 0) st_view(using_numvars = J(0, 0, .), ., numvarstr, st_local("touse"))
+    if (cols(strvars) > 0) st_sview(using_strvars = J(0, 0, .), ., strvarstr, st_local("touse"))
+    if (cols(strLvars) > 0) using_strLvars = st_sdata(., strLvarstr, st_local("touse"))
 
-    usingnobs = rows(numvars) > 0 ? rows(using_numvars) : rows(using_strvars)
+    usingnobs = max( ( rows(using_numvars), rows(using_strvars), rows(using_strLvars) ) )
 
     // Create views on master frame
     st_framecurrent(masterframe)
@@ -221,17 +251,29 @@ void append(string scalar varlist, string scalar usingframe, string scalar maste
     masternobs = st_nobs()
     st_addobs(usingnobs)
     
-    if (rows(numvars) > 0) st_view(master_numvars = ., (masternobs + 1, masternobs + usingnobs), numvarstr)
-    if (rows(strvars) > 0) st_sview(master_strvars = ., (masternobs + 1, masternobs + usingnobs), strvarstr)
-    
     // Replace observations in master views with observations in using views
-    if (rows(numvars) > 0) master_numvars[., .] = using_numvars
-    if (rows(strvars) > 0) master_strvars[., .] = using_strvars
+    if (cols(numvars) > 0) {
+        st_view(master_numvars = ., (masternobs + 1, masternobs + usingnobs), tokens(numvarstr))
+        master_numvars[., .] = using_numvars
+    }
+
+    if (cols(strvars) > 0) {
+        st_sview(master_strvars = J(0, 0, ""), (masternobs + 1, masternobs + usingnobs), tokens(strvarstr))
+        master_strvars[., .] = using_strvars
+    }
+
+    if (cols(strLvars) > 0) {
+        st_sstore((masternobs + 1)::(masternobs + usingnobs), tokens(strLvarstr), using_strLvars)
+    }
 }
 
 
 void incompatible_vars(string scalar commonvars, string scalar usingframe, string scalar masterframe)
 {
+    string scalar currentframe
+    string rowvector t, incompatible_vars
+    real scalar i, numvar_master, numvar_using
+
     currentframe = st_framecurrent()
     t = tokens(commonvars)
     incompatible_vars = J(1, 0, "")
@@ -253,12 +295,13 @@ end
 
 * Version history
 * 1.1.0 New features:
-*       - Multiple frames can be appended by providing the frame names to using: using(f1 f2 f3 ...).
-*         Wildcards are allowed in framelist, e.g., 'using(f* g??)'
-*       - Option generate(name) to generate a variable that marks the origin of the observations
-*         0 = master frame, 1, 2, 3, ... = frame number corresponding to the order of the frames given in
-*         the `using()` option
+*       - Multiple frames can be appended by providing the frame names to using: `using(f1 f2 f3 ...)`.
+*         Wildcards are allowed in framelist, e.g., `using(f* g??)`.
+*       - Option `generate(newvarname)` generates a variable that contains the origin frame name of the observations.
+*       - Option `drop` drops appended using frames. Useful for conserving memory.
 *      Bugfixes:
+*       - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. 
+*         This has been fixed.
 *       - Previously, after appending the using frames, Stata considered the data in the master frame to be
 *         sorted according to the sort variables in the master frame (if the master frame was sorted before running 
 *         fframeappend) even if - because of the appended using frames - it wasn't. This could cause unexpected results,
