@@ -21,7 +21,7 @@
 {synoptline}
 {synopt:{opt force}}             append string to numeric or numeric to string without error{p_end}
 {synopt:{opt preserve}}          master frame will be restored if the program fails for any using frame or if the user presses {helpb break:Break}{p_end}
-{synopt:{opt drop}}              drop using frames after appending{p_end}
+{synopt:{opt drop}}              drop using frames after appending. Cannot be chosen in combination with {opt preserve}.{p_end}
 {synopt:{opth g:enerate(newvarname)}}  specifies the name of a new string variable to be created that contains the name of the 
 origin frame for each observation{p_end}
 

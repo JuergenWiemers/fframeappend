@@ -1,5 +1,5 @@
 *! fframeappend 1.1.0DEV 22jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
-*! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve Generate(name) drop]
+*! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve drop Generate(name)]
 *!
 *! fframeappend ("fast frame append") appends variables from using frames 'framelist'
 *! to the active (master) frame.
@@ -47,7 +47,14 @@ program fframeappend
 
     // Check `if'/`in' in using frames
     foreach usingf in `expanded_frames' {
-        frame `usingf': syntax [anything] [if] [in], using(namelist min=1) [force preserve Generate(name) drop]
+        frame `usingf': syntax [anything] [if] [in], using(namelist min=1) [force preserve drop Generate(name)]
+    }
+
+    // Don't allow using options `preserve` and `drop` together
+    if ("`drop'" != "" & "`preserve'" != "") {
+        display as error "Selecting the `preserve` and `drop` options at the same time is not allowed as"
+        display as error "this may cause `using` frames to be lost."
+        exit 198
     }
 
     // Check that generate variable does not exist in master and any using frame
@@ -88,6 +95,8 @@ program fframeappend
         frame `usingf': mata: st_local("has_variables", strofreal(st_nvar() > 0)) // Test if empy frame -> skip
         if (`has_variables') fframeappend_run `anything' `if' `in', using(`usingf') `force'
         if ("`generate'" != "") qui replace `generate' = "`usingf'" if `generate' == ""
+        qui describe, short
+        if ("`generate'" != "" & r(N) == 0) qui drop `generate'
         if ("`drop'" != "") qui frame drop `usingf'
     }
 
@@ -298,7 +307,8 @@ end
 *       - Multiple frames can be appended by providing the frame names to using: `using(f1 f2 f3 ...)`.
 *         Wildcards are allowed in framelist, e.g., `using(f* g??)`.
 *       - Option `generate(newvarname)` generates a variable that contains the origin frame name of the observations.
-*       - Option `drop` drops appended using frames. Useful for conserving memory.
+*       - Option `drop` drops appended using frames. Useful for conserving memory. Cannot be selected in combination
+*         with `preserve`.
 *      Bugfixes:
 *       - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. 
 *         This has been fixed.
