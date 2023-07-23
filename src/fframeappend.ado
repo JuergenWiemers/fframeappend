@@ -84,7 +84,10 @@ program fframeappend
     if ("`preserve'" != "") preserve
 
     if ("`generate'" != "")  {
-        generate str `generate' = "`master'"
+        generate byte `generate' = 0
+        label variable `generate' "Original frame of observations"
+        label define _FFA_vl_ 0 "[0] `master'", replace 
+        label values `generate' _FFA_vl_
     }
 
     // Loop over framelist
@@ -94,7 +97,11 @@ program fframeappend
         frame `usingf': cap drop __0* // drop potential local variables in using frames
         frame `usingf': mata: st_local("has_variables", strofreal(st_nvar() > 0)) // Test if empy frame -> skip
         if (`has_variables') fframeappend_run `anything' `if' `in', using(`usingf') `force'
-        if ("`generate'" != "") qui replace `generate' = "`usingf'" if `generate' == ""
+        if ("`generate'" != "") {
+            qui replace `generate' = `counter' if `generate' == .
+            label define _FFA_vl_ `counter' "[`counter'] `usingf'", add
+            label values `generate' _FFA_vl_
+        }
         qui describe, short
         if ("`generate'" != "" & r(N) == 0) qui drop `generate'
         if ("`drop'" != "") qui frame drop `usingf'
@@ -306,7 +313,8 @@ end
 * 1.1.0 New features:
 *       - Multiple frames can be appended by providing the frame names to using: `using(f1 f2 f3 ...)`.
 *         Wildcards are allowed in framelist, e.g., `using(f* g??)`.
-*       - Option `generate(newvarname)` generates a variable that contains the origin frame name of the observations.
+*       - Option `generate(newvarname)` generates a labeled numeric variable that indicates the original frame
+*         of the observations.
 *       - Option `drop` drops appended using frames. Useful for conserving memory. Cannot be selected in combination
 *         with `preserve`.
 *      Bugfixes:
