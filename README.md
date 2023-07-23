@@ -18,7 +18,7 @@ or install the package through SSC.
 
 * **version v1.1.0DEV 22jul2023**:
     - Option `using` now accepts multiple frame names. All `using` frames are appended in the specified order. Wildcards are allowed, e.g., `using(fr*)`.
-    - Option `generate(newvarname)` generates a variable that contains the origin frame name of the observations.
+    - Option `generate(newvarname)` generates a variable that indicates the original frame of the observations.
     - Option `drop` drops appended using frames. Useful for conserving memory.
     - Bugfixes:
       - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. This has been fixed.
