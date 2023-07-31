@@ -2,11 +2,11 @@
 
 Appends data frames to the active data frame in Stata
 
-Latest SSC version: v1.0.3
+Latest SSC version: v1.1.0
 
 ## Installation
 
-To install the latest stable version (v1.0.3) of this package, run the following line from the Stata prompt:
+To install the latest stable version (v1.1.0) of this package, run the following line from the Stata prompt:
 
 ```stata
 net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/master/src) replace
@@ -16,18 +16,13 @@ or install the package through SSC.
 
 ## Recent Updates
 
-* **version v1.1.0DEV 22jul2023**:
+* **version v1.1.0 31jul2023**:
     - Option `using` now accepts multiple frame names. All `using` frames are appended in the specified order. Wildcards are allowed, e.g., `using(fr*)`.
     - Option `generate(newvarname)` generates a variable that indicates the original frame of the observations.
     - Option `drop` drops appended using frames. Useful for conserving memory.
     - Bugfixes:
       - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. This has been fixed.
       - Previously, after appending the using frames, Stata considered the data in the master frame to be sorted according to the sort variables in the master frame (if the master frame was sorted before running `fframeappend`) even if - because of the appended using frames - it wasn't. This could cause unexpected results, e.g., in a `merge` command following `fframeappend` because `merge` (falsely) considered the dataset to be correctly sorted. This has been fixed. Thanks to Stefan Mangelsdorf for notifying me about this issue.
-
-    You can install this development version with
-    ```stata
-    net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/v1.1.0DEV/src) replace
-    ```
 
 
 ## Remarks

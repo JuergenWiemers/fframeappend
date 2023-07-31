@@ -1,4 +1,4 @@
-*! fframeappend 1.1.0DEV 22jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! fframeappend 1.1.0 31jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
 *! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve drop Generate(name)]
 *!
 *! fframeappend ("fast frame append") appends variables from using frames 'framelist'
