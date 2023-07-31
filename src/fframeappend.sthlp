@@ -1,9 +1,9 @@
 {smcl}
-{* *! version 1.0.2  4apr2022}{...}
+{* *! version 1.1.0  31jul2023}{...}
 {title:Title}
 
 {phang}
-{bf:fframeappend} {hline 2} Append data frame to currently active data frame
+{bf:fframeappend} {hline 2} Append data frames to currently active data frame
 
 
 {marker syntax}{...}
@@ -13,26 +13,30 @@
 {cmdab:fframeappend}
     [{it:{help varlist}}]
     {ifin}
-    {cmd:, using(framename)}
-    [{cmd:force} {cmd:{help preserve}}]
+    {cmd:, using({it:framelist})}
+    [{opt force} {cmd:{help preserve}} {opt drop} {opt g:enerate(newvarname)}]
 
-{synoptset 20 tabbed}{...}
+{synoptset 30 tabbed}{...}
 {synopthdr}
 {synoptline}
-{synopt:{opt force}} append string to numeric or numeric to string without error{p_end}
-{synopt:{opt preserve}} master frame will be restored if the program fails or if the user presses {helpb break:Break}{p_end}
+{synopt:{opt force}}             append string to numeric or numeric to string without error{p_end}
+{synopt:{opt preserve}}          master frame will be restored if the program fails for any using frame or if the user presses {helpb break:Break}{p_end}
+{synopt:{opt drop}}              drop using frames after appending. Cannot be chosen in combination with {opt preserve}.{p_end}
+{synopt:{opth g:enerate(newvarname)}}  specifies the name of a new variable to be created that indicates the 
+original frame for each observation{p_end}
 
 {marker description}{...}
 {title:Description}
 
 {pstd}
-{cmd:fframeappend} appends the variables {it:{help varlist}} in the "using frame" to the currently active frame. 
-If no {it:{help varlist}} is provided, all variables in the using frame will be appended to the currently active frame. 
-The new observations will be at the bottom of the currently active frame. 
+{cmd:fframeappend} appends the variables {it:{help varlist}} in the frames {it: framelist} to the current frame. 
+If no {it:{help varlist}} is provided all variables in frames {it: framelist} will be appended to the current frame. 
+If a {it:{help varlist}} is provided all variables must be present in all frames of  {it: framelist}.
+If option {cmd:{help in}} is provided the range must be feasible in all frames of  {it: framelist}.
+The new observations will be at the bottom of the current frame. 
 Variables in the currently active frame are automatically promoted following the promotion rules of {cmd:{help replace}}.
-The ordering of variables in the currently active frames is preserved. 
 With option {cmd:force}, the appended values for incompatible variables (numeric <-> string) are filled with missing values or empty strings, 
-depending on the type of the incompatible variable in the currently active frame.
+depending on the type of the incompatible variable in the currently active frame. All variable types (see {it:{help data_type}}) are supported.
 
 {title:Remarks and Acknowledgements}
 
@@ -46,5 +50,5 @@ For relatively large using data frames (>100.000 observation, >1.000 variables) 
 {title:Author}
 
 {pstd}
-JÃ¼rgen Wiemers, IAB NÃ¼rnberg, juergen.wiemers@iab.de
+Jürgen Wiemers, IAB Nürnberg, juergen.wiemers@iab.de, {browse "https://github.com/JuergenWiemers/fframeappend":https://github.com/JuergenWiemers/fframeappend}.
 
