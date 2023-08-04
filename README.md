@@ -16,6 +16,13 @@ or install the package through SSC.
 
 ## Recent Updates
 
+* **version v1.1.1 4aug2023**:
+    - Bugfixes:
+      - After 1.1.0, abbreviating variables in varlist didn't work anymore. This has been fixed.
+    - Improvements:
+      - Previously, if 'varlist' was specified and a given variable was missing in the n-th using frame (but not in using frames 1 to (n-1)) the first n-1 frames were appended and then an error message about the missing variable was issued. Then, if option 'preserve' was also chosen, the currently active using frame was restored. Now the command fails early: The existence of all variables in 'varlist' in all using frames is checked before appending any using frames.
+
+
 * **version v1.1.0 31jul2023**:
     - Option `using` now accepts multiple frame names. All `using` frames are appended in the specified order. Wildcards are allowed, e.g., `using(fr*)`.
     - Option `generate(newvarname)` generates a variable that indicates the original frame of the observations.

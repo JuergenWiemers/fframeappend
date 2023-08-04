@@ -1,4 +1,4 @@
-*! fframeappend 1.1.0 31jul2023 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! fframeappend 1.1.1 4aug2023 JÃ¼rgen Wiemers (juergen.wiemers@iab.de)
 *! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve drop Generate(name)]
 *!
 *! fframeappend ("fast frame append") appends variables from using frames 'framelist'
@@ -22,11 +22,12 @@ program fframeappend
     }
 
     // Get current sort information
-    qui describe, fullnames varlist
+    qui describe, varlist
     local sortlist `r(sortlist)'
 
     // Replace abbreviated frame list with expanded list; rebuild local 0 with expanded list
     local using_frames = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
+
     local using_frames: list clean using_frames
     local using_frames: list uniq using_frames
     local expanded_frames
@@ -45,9 +46,14 @@ program fframeappend
         exit 110
     }
 
-    // Check `if'/`in' in using frames
+    // Get unexpanded varlist and extract potential `if' `in' from 'syntax' applied to first using frame
+    local firstframe: word 1 of `expanded_frames'
+    frame `firstframe': syntax [anything] [if] [in], using(namelist min=1) [force preserve drop Generate(name)]
+    local varlist_unexpanded `anything'
+
+    // Check existence of variables and `if'/`in' in all using frames
     foreach usingf in `expanded_frames' {
-        frame `usingf': syntax [anything] [if] [in], using(namelist min=1) [force preserve drop Generate(name)]
+        frame `usingf': syntax [varlist] [if] [in], using(namelist min=1) [force preserve drop Generate(name)]
     }
 
     // Don't allow using options `preserve` and `drop` together
@@ -73,13 +79,14 @@ program fframeappend
         }
     }
 
-    // Check whether * or _all are in `anything'
+    // Check whether * or _all are in `varlist_unexpanded'; if both * and _all are given, simply use all variables.
+    // -> Append all variables in all using files, no matter what else is specified in varlist
     local flag = 0
     foreach token in * _all {
-        local test: list posof "`token'" in anything
+        local test: list posof "`token'" in varlist_unexpanded
         if (`test') local flag = 1
     }
-    if (`flag') local anything = ""
+    if (`flag') local varlist_unexpanded = ""
 
     if ("`preserve'" != "") preserve
 
@@ -96,7 +103,7 @@ program fframeappend
         local `counter++'
         frame `usingf': cap drop __0* // drop potential local variables in using frames
         frame `usingf': mata: st_local("has_variables", strofreal(st_nvar() > 0)) // Test if empy frame -> skip
-        if (`has_variables') fframeappend_run `anything' `if' `in', using(`usingf') `force'
+        if (`has_variables') fframeappend_run `varlist_unexpanded' `if' `in', using(`usingf') `force'
         if ("`generate'" != "") {
             qui replace `generate' = `counter' if `generate' == .
             label define _FFA_vl_ `counter' "[`counter'] `usingf'", add
@@ -126,24 +133,10 @@ program fframeappend_run
     // run 'syntax' on the using frame.
     local using = regexr( regexr( "`0'", "(.*)using\(", "" ) , "\).*$", "")
 
-    frame `using': syntax [anything] [if] [in], using(namelist min=1) [force]
-
-    // Check if variables exist in frame
-    if "`anything'" != "" {
-        foreach var in `anything' {
-            frame `using': capture confirm variable `var'
-            if _rc {
-                display as error "Variable `var' does not exist in using frame `using'."
-                exit 111
-            }
-        }
-    }
+    frame `using': syntax [varlist] [if] [in], using(namelist min=1) [force]
 
     qui frame
     local master = r(currentframe)
-    
-    frame `using': qui describe `anything', fullnames varlist
-    local varlist = r(varlist)
 
     // Edge case: empty master frame
     mata: st_local("master_has_vars", strofreal(st_nvar()))
@@ -310,21 +303,29 @@ end
 
 
 * Version history
-* 1.1.0 New features:
-*       - Multiple frames can be appended by providing the frame names to using: `using(f1 f2 f3 ...)`.
-*         Wildcards are allowed in framelist, e.g., `using(f* g??)`.
-*       - Option `generate(newvarname)` generates a labeled numeric variable that indicates the original frame
-*         of the observations.
-*       - Option `drop` drops appended using frames. Useful for conserving memory. Cannot be selected in combination
-*         with `preserve`.
-*      Bugfixes:
-*       - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. 
-*         This has been fixed.
-*       - Previously, after appending the using frames, Stata considered the data in the master frame to be
-*         sorted according to the sort variables in the master frame (if the master frame was sorted before running 
-*         fframeappend) even if - because of the appended using frames - it wasn't. This could cause unexpected results,
-*         e.g., in a `merge` command following fframeappend because `merge` (falsely) considered the dataset to be
-*         correctly sorted. This has been fixed. Thanks to Stefan Mangelsdorf for notifying me about this issue.
+* 1.1.1 - Bugfixes:
+*         - After 1.1.0, abbreviating variables in varlist didn't work anymore. This has been fixed.
+*       - Improvements:
+*         - Previously, if 'varlist' was specified and a given variable was missing in the n-th using frame 
+*           (but not in using frames 1 to (n-1)) the first n-1 frames were appended and then an error message
+*           about the missing variable was issued. Then, if option 'preserve' was also chosen, the currently
+*           active using frame was restored. Now the command fails early: The existence of all variables in 'varlist'
+*           in all using frames is checked before appending any using frames.
+* 1.1.0 - New features:
+*         - Multiple frames can be appended by providing the frame names to using: `using(f1 f2 f3 ...)`.
+*           Wildcards are allowed in framelist, e.g., `using(f* g??)`.
+*         - Option `generate(newvarname)` generates a labeled numeric variable that indicates the original frame
+*           of the observations.
+*         - Option `drop` drops appended using frames. Useful for conserving memory. Cannot be selected in combination
+*           with `preserve`.
+*       - Bugfixes:
+*         - Variables of type `strL` in either the master or any using frame previously resulted in a runtime error. 
+*           This has been fixed.
+*         - Previously, after appending the using frames, Stata considered the data in the master frame to be
+*           sorted according to the sort variables in the master frame (if the master frame was sorted before running 
+*           fframeappend) even if - because of the appended using frames - it wasn't. This could cause unexpected results,
+*           e.g., in a `merge` command following fframeappend because `merge` (falsely) considered the dataset to be
+*           correctly sorted. This has been fixed. Thanks to Stefan Mangelsdorf for notifying me about this issue.
 * 1.0.3 Promoting variables in the master frame resulted in noisy output ("missing values created") if the
 *       promoted variable contained missing values. This has been fixed. (Thanks to James Beard for informing
 *       me about the issue.)

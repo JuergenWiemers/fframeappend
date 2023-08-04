@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.1.0  31jul2023}{...}
+{* *! version 1.1.1  4aug2023}{...}
 {title:Title}
 
 {phang}
@@ -50,5 +50,5 @@ For relatively large using data frames (>100.000 observation, >1.000 variables) 
 {title:Author}
 
 {pstd}
-Jürgen Wiemers, IAB Nürnberg, juergen.wiemers@iab.de, {browse "https://github.com/JuergenWiemers/fframeappend":https://github.com/JuergenWiemers/fframeappend}.
+JÃ¼rgen Wiemers, IAB NÃ¼rnberg, juergen.wiemers@iab.de, {browse "https://github.com/JuergenWiemers/fframeappend":https://github.com/JuergenWiemers/fframeappend}.
 
