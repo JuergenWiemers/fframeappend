@@ -16,6 +16,11 @@ or install the package through SSC.
 
 ## Recent Updates
 
+* **version v1.1.2 7jan2025**:
+   - Bugfixes:
+     - Previously, `strX' variables were not always correctly promoted to `strY' variables for X < Y. This could lead
+       to an appended string variable being truncated. This has been fixed. (Thanks to Roger Newson for reporting the issue.)
+
 * **version v1.1.1 4aug2023**:
     - Bugfixes:
       - After 1.1.0, abbreviating variables in varlist didn't work anymore. This has been fixed.

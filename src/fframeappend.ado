@@ -1,4 +1,4 @@
-*! fframeappend 1.1.1 4aug2023 Jürgen Wiemers (juergen.wiemers@iab.de)
+*! fframeappend 1.1.2 7jan2025 Jürgen Wiemers (juergen.wiemers@iab.de)
 *! Syntax: fframeappend [varlist] [if] [in], using(framelist) [force preserve drop Generate(name)]
 *!
 *! fframeappend ("fast frame append") appends variables from using frames 'framelist'
@@ -172,15 +172,15 @@ program fframeappend_run
 
         cap confirm numeric variable `var', exact // Numeric and string variables need to be treated differently
         if (!_rc) { // numeric
-            if      ( ("`tm'" == "byte")  & inlist("`tu'", "int", "long", "float", "double") ) recast `tu' `var'
-            else if ( ("`tm'" == "int")   & inlist("`tu'", "long", "float", "double") )        recast `tu' `var'
-            else if ( ("`tm'" == "long")  & inlist("`tu'", "float", "double") )                recast double `var'
-            else if ( ("`tm'" == "float") & inlist("`tu'", "long", "double") )                 recast double `var'
+            if      ( ("`tm'" == "byte")  & inlist("`tu'", "int", "long", "float", "double") )          recast `tu' `var'
+            else if ( ("`tm'" == "int")   & inlist("`tu'", "long", "float", "double") )                 recast `tu' `var'
+            else if ( ("`tm'" == "long")  & inlist("`tu'", "float", "double") )                         recast double `var'
+            else if ( ("`tm'" == "float") & inlist("`tu'", "long", "double") )                          recast double `var'
         }
         else { // string
             // Check for strL variables
-            if (!strmatch("`tm'", "strL") & "`tu'" == "strL")                                  recast `tu' `var'
-            else if ( subinstr("`tm'", "str", "", 1) < subinstr("`tu'", "str", "", 1) )        recast `tu' `var'
+            if (!strmatch("`tm'", "strL") & "`tu'" == "strL")                                           recast `tu' `var'
+            else if ( real(subinstr("`tm'", "str", "", 1)) < real(subinstr("`tu'", "str", "", 1)) )     recast `tu' `var'
         }
     }
 
@@ -303,6 +303,9 @@ end
 
 
 * Version history
+* 1.1.2 - Bugfixes:
+*         - Previously, `strX' variables were not always correctly promoted to `strY' variables for X < Y. This could lead
+*           to an appended string variable being truncated. This has been fixed. (Thanks to Roger Newson for reporting the issue.)
 * 1.1.1 - Bugfixes:
 *         - After 1.1.0, abbreviating variables in varlist didn't work anymore. This has been fixed.
 *       - Improvements:
