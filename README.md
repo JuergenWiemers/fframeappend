@@ -2,11 +2,11 @@
 
 Appends data frames to the active data frame in Stata
 
-Latest SSC version: v1.1.1
+Latest SSC version: v1.1.2
 
 ## Installation
 
-To install the latest stable version (v1.1.1) of this package, run the following line from the Stata prompt:
+To install the latest stable version (v1.1.2) of this package, run the following line from the Stata prompt:
 
 ```stata
 net install fframeappend, from(https://raw.githubusercontent.com/JuergenWiemers/fframeappend/master/src) replace
